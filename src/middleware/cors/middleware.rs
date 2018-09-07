@@ -2,7 +2,7 @@ use super::{Config, CorsService};
 use middleware::Middleware;
 
 use http;
-use util::http::HttpService;
+use util::{BufStream, http::HttpService};
 
 use std::sync::Arc;
 
@@ -21,6 +21,7 @@ impl CorsMiddleware {
 impl<S, R> Middleware<S, http::Request<R>> for CorsMiddleware
 where
     S: HttpService<R>,
+    R: BufStream,
 {
     type Response = http::Response<Option<S::ResponseBody>>;
     type Error = S::Error;

@@ -10,9 +10,7 @@ use tower_service::NewService;
 /// This is not intended to be implemented directly. Instead, it is a trait
 /// alias of sorts, aliasing `tower_service::NewService` trait with
 /// `http::Request` and `http::Response` types.
-pub trait NewHttpService: sealed::Sealed {
-    /// The HTTP request body handled by the service.
-    type RequestBody: BufStream;
+pub trait NewHttpService<RequestBody: BufStream>: sealed::Sealed<RequestBody> {
 
     /// The HTTP response body returned by the service.
     type ResponseBody: BufStream;
@@ -21,7 +19,7 @@ pub trait NewHttpService: sealed::Sealed {
     type Error;
 
     /// The `Service` value created by this factory
-    type Service: HttpService<RequestBody = Self::RequestBody,
+    type Service: HttpService<RequestBody,
                              ResponseBody = Self::ResponseBody,
                                     Error = Self::Error>;
 
@@ -35,13 +33,12 @@ pub trait NewHttpService: sealed::Sealed {
     fn new_http_service(&self) -> Self::Future;
 }
 
-impl<T, B1, B2> NewHttpService for T
-where T: NewService<Request = Request<B1>,
+impl<T, B1, B2> NewHttpService<B1> for T
+where T: NewService<Request<B1>,
                    Response = Response<B2>>,
       B1: BufStream,
       B2: BufStream
 {
-    type RequestBody = B1;
     type ResponseBody = B2;
     type Error = T::Error;
     type Service = T::Service;
@@ -53,13 +50,13 @@ where T: NewService<Request = Request<B1>,
     }
 }
 
-impl<T, B1, B2> sealed::Sealed for T
-where T: NewService<Request = Request<B1>,
+impl<T, B1, B2> sealed::Sealed<B1> for T
+where T: NewService<Request<B1>,
                    Response = Response<B2>>,
       B1: BufStream,
       B2: BufStream
 {}
 
 mod sealed {
-    pub trait Sealed {}
+    pub trait Sealed<B> {}
 }

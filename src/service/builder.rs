@@ -319,7 +319,7 @@ impl<T, C, M> ServiceBuilder<T, C, M> {
     pub fn build_new_service<RequestBody>(self) -> NewWebService<T::Resource, C::Catch, M>
     where T: IntoResource<DefaultSerializer, RequestBody>,
           C: IntoCatch<DefaultSerializer>,
-          M: HttpMiddleware<RoutedService<T::Resource, C::Catch>>,
+          M: HttpMiddleware<RoutedService<T::Resource, C::Catch>, RequestBody>,
           RequestBody: BufStream,
     {
         // Build the routes
@@ -367,9 +367,9 @@ impl<T, C, M> ServiceBuilder<T, C, M> {
     where T: IntoResource<DefaultSerializer, ::run::LiftReqBody>,
           C: IntoCatch<DefaultSerializer> + Send + 'static,
           C::Catch: Send,
-          M: HttpMiddleware<RoutedService<T::Resource, C::Catch>, RequestBody = ::run::LiftReqBody> + Send + 'static,
+          M: HttpMiddleware<RoutedService<T::Resource, C::Catch>, ::run::LiftReqBody> + Send + 'static,
           M::Service: Send,
-          <M::Service as HttpService>::Future: Send,
+          <M::Service as HttpService<::run::LiftReqBody>>::Future: Send,
           M::ResponseBody: Send,
           <M::ResponseBody as BufStream>::Item: Send,
           T::Resource: Send + 'static,

@@ -18,11 +18,11 @@ use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-struct Lift<T: HttpService> {
+struct Lift<T: HttpService<LiftReqBody>> {
     inner: T,
 }
 
-struct LiftBody<T: HttpService> {
+struct LiftBody<T: HttpService<LiftReqBody>,> {
     body: T::ResponseBody,
 }
 
@@ -33,7 +33,7 @@ pub struct LiftReqBody {
 
 impl<T> Lift<T>
 where
-    T: HttpService<RequestBody = LiftReqBody>,
+    T: HttpService<LiftReqBody>,
 {
     fn new(inner: T) -> Self {
         Lift { inner }
@@ -42,7 +42,7 @@ where
 
 impl<T> Payload for LiftBody<T>
 where
-    T: HttpService + 'static,
+    T: HttpService<LiftReqBody> + 'static,
     <T::ResponseBody as BufStream>::Item: Send,
     T::ResponseBody: Send,
 {
@@ -66,7 +66,7 @@ impl BufStream for LiftReqBody {
 
 impl<T> HyperService for Lift<T>
 where
-    T: HttpService<RequestBody = LiftReqBody> + 'static,
+    T: HttpService<LiftReqBody> + 'static,
     <T::ResponseBody as BufStream>::Item: Send,
     T::ResponseBody: Send,
     T::Future: Send,
@@ -91,12 +91,12 @@ where
 /// Run a service
 pub fn run<T>(addr: &SocketAddr, new_service: T) -> io::Result<()>
 where
-    T: NewHttpService<RequestBody = LiftReqBody> + Send + 'static,
+    T: NewHttpService<LiftReqBody> + Send + 'static,
     T::Future: Send,
     <T::ResponseBody as BufStream>::Item: Send,
     T::ResponseBody: Send,
     T::Service: Send,
-    <T::Service as HttpService>::Future: Send,
+    <T::Service as HttpService<LiftReqBody>>::Future: Send,
 {
     let listener = TcpListener::bind(addr)?;
     let http = Arc::new(Http::new());

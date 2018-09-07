@@ -17,7 +17,7 @@ impl LogMiddleware {
     }
 }
 
-impl<S, RequestBody, ResponseBody> Middleware<S, RequestBody> for LogMiddleware
+impl<S, RequestBody, ResponseBody> Middleware<S, http::Request<RequestBody>> for LogMiddleware
 where S: Service<http::Request<RequestBody>,
                 Response = http::Response<ResponseBody>>,
       S::Error: ::std::error::Error,

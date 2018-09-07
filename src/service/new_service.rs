@@ -1,8 +1,10 @@
 use error::Catch;
 use routing::{Resource, RoutedService};
 use service::WebService;
-use util::Never;
-use util::http::{HttpMiddleware};
+use util::{
+    BufStream, Never,
+    http::{HttpMiddleware},
+};
 
 use futures::future::{self, FutureResult};
 use http;
@@ -29,7 +31,6 @@ impl<T, U, M> NewWebService<T, U, M>
 where
     T: Resource,
     U: Catch,
-    M: HttpMiddleware<RoutedService<T, U>>,
 {
     /// Create a new `NewWebService` instance.
     pub(crate) fn new(service: RoutedService<T, U>, middleware: M) -> Self {
@@ -40,16 +41,16 @@ where
     }
 }
 
-impl<T, U, M> NewService for NewWebService<T, U, M>
+impl<T, U, M, B> NewService<http::Request<B>> for NewWebService<T, U, M>
 where
     T: Resource,
     U: Catch,
-    M: HttpMiddleware<RoutedService<T, U>>,
+    M: HttpMiddleware<RoutedService<T, U>, B>,
+    B: BufStream,
 {
-    type Request = http::Request<M::RequestBody>;
     type Response = http::Response<M::ResponseBody>;
     type Error = M::Error;
-    type Service = WebService<T, U, M>;
+    type Service = WebService<T, U, M, B>;
     type InitError = Never;
     type Future = FutureResult<Self::Service, Self::InitError>;
 

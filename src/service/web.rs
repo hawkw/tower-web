@@ -1,6 +1,9 @@
 use error::Catch;
 use routing::{Resource, RoutedService};
-use util::http::{HttpMiddleware, HttpService};
+use util::{
+    http::{HttpMiddleware, HttpService},
+    BufStream,
+};
 
 use futures::Poll;
 use http;
@@ -13,53 +16,55 @@ use std::fmt;
 /// `WebService` contains the resources, routes, middleware, catch handlers, ...
 /// that were defined by the builder. It implements `tower_service::Service`,
 /// which exposes an HTTP request / response API.
-pub struct WebService<T, U, M>
+pub struct WebService<T, U, M, B>
 where
     T: Resource,
     U: Catch,
-    M: HttpMiddleware<RoutedService<T, U>>,
+    M: HttpMiddleware<RoutedService<T, U>, B>,
+    B: BufStream,
 {
     /// The routed service wrapped with middleware
     inner: M::Service,
 }
 
-impl<T, U, M> WebService<T, U, M>
+impl<T, U, M, B> WebService<T, U, M, B>
 where
     T: Resource,
     U: Catch,
-    M: HttpMiddleware<RoutedService<T, U>>,
+    M: HttpMiddleware<RoutedService<T, U>, B>,
+    B: BufStream,
 {
-    pub(crate) fn new(inner: M::Service) -> WebService<T, U, M> {
+    pub(crate) fn new(inner: M::Service) -> WebService<T, U, M, B> {
         WebService { inner }
     }
 }
 
-impl<T, U, M> Service for WebService<T, U, M>
+impl<T, U, M, B> Service<http::Request<B>> for WebService<T, U, M, B>
 where
     T: Resource,
     U: Catch,
-    M: HttpMiddleware<RoutedService<T, U>>,
+    M: HttpMiddleware<RoutedService<T, U>, B>,
+    B: BufStream,
 {
-    type Request = http::Request<M::RequestBody>;
     type Response = http::Response<M::ResponseBody>;
     type Error = M::Error;
-    type Future = <M::Service as HttpService>::Future;
+    type Future = <M::Service as HttpService<B>>::Future;
 
     fn poll_ready(&mut self) -> Poll<(), Self::Error> {
         self.inner.poll_http_ready()
     }
 
-    fn call(&mut self, request: Self::Request) -> Self::Future {
+    fn call(&mut self, request: http::Request<B>) -> Self::Future {
         self.inner.call_http(request)
     }
 }
 
-impl<T, U, M> fmt::Debug for WebService<T, U, M>
+impl<T, U, M, B> fmt::Debug for WebService<T, U, M, B>
 where T: Resource + fmt::Debug,
       U: Catch + fmt::Debug,
-      M: HttpMiddleware<RoutedService<T, U>> + fmt::Debug,
+      M: HttpMiddleware<RoutedService<T, U>, B> + fmt::Debug,
       M::Service: fmt::Debug,
-      M::RequestBody: fmt::Debug,
+      B: BufStream + fmt::Debug,
       M::ResponseBody: fmt::Debug,
       M::Error: fmt::Debug,
 {

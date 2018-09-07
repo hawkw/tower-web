@@ -9,7 +9,7 @@ use tower_service::Service;
 /// This is not intended to be implemented directly. Instead, it is a trait
 /// alias of sorts, aliasing `tower_service::Service` trait with `http::Request`
 /// and `http::Response` types.
-pub trait HttpService<RequestBody: BufStream>: sealed::Service {
+pub trait HttpService<RequestBody: BufStream>: sealed::Service<RequestBody> {
     /// The HTTP response body type.
     type ResponseBody: BufStream;
 
@@ -76,10 +76,11 @@ impl<T> LiftService<T> {
     }
 }
 
-impl<T> Service for LiftService<T>
-where T: HttpService,
+impl<T, B> Service<Request<B>> for LiftService<T>
+where
+    T: HttpService<B>,
+    B: BufStream,
 {
-    type Request = Request<T::RequestBody>;
     type Response = Response<T::ResponseBody>;
     type Error = T::Error;
     type Future = T::Future;
@@ -88,19 +89,19 @@ where T: HttpService,
         self.inner.poll_http_ready()
     }
 
-    fn call(&mut self, request: Self::Request) -> Self::Future {
+    fn call(&mut self, request: Request<B>) -> Self::Future {
         self.inner.call_http(request)
     }
 }
 
-impl<T, B1, B2> sealed::Service for T
+impl<T, B1, B2> sealed::Service<B1> for T
 where
-    T: Service<Request = Request<B1>, Response = Response<B2>>,
+    T: Service<Request<B1>, Response = Response<B2>>,
     B1: BufStream,
     B2: BufStream
 {
 }
 
 mod sealed {
-    pub trait Service {}
+    pub trait Service<B1> {}
 }
