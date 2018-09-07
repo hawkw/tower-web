@@ -29,12 +29,11 @@ use tower_service::Service;
 ///     target: &'static str,
 /// }
 ///
-/// impl<S> Middleware<S> for LogMiddleware
+/// impl<S, R> Middleware<S, R> for LogMiddleware
 /// where
-///     S: Service,
-///     S::Request: fmt::Debug,
+///     S: Service<R>,
+///     R: fmt::Debug,
 /// {
-///     type Request = S::Request;
 ///     type Response = S::Response;
 ///     type Error = S::Error;
 ///     type Service = LogService<S>;
@@ -53,12 +52,11 @@ use tower_service::Service;
 ///     service: S,
 /// }
 ///
-/// impl<S> Service for LogService<S>
+/// impl<S, R> Service<R> for LogService<S>
 /// where
-///     S: Service,
-///     S::Request: fmt::Debug,
+///     S: Service<R>,
+///     R: fmt::Debug,
 /// {
-///     type Request = S::Request;
 ///     type Response = S::Response;
 ///     type Error = S::Error;
 ///     type Future = S::Future;
@@ -67,7 +65,7 @@ use tower_service::Service;
 ///         self.service.poll_ready()
 ///     }
 ///
-///     fn call(&mut self, request: Self::Request) -> Self::Future {
+///     fn call(&mut self, request: R) -> Self::Future {
 ///         info!(target: self.target, "request = {:?}", request);
 ///         self.service.call(request)
 ///     }
