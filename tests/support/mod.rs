@@ -3,7 +3,10 @@
 pub extern crate futures;
 extern crate tower_service;
 
-pub use tower_web::util::http::HttpService;
+pub use tower_web::util::{
+    http::HttpService,
+    BufStream,
+};
 
 use tower_web::ServiceBuilder;
 use tower_web::response::DefaultSerializer;
@@ -107,7 +110,7 @@ macro_rules! assert_body {
     }}
 }
 
-pub fn service<U>(resource: U) -> impl TestHttpService<RequestBody = String>
+pub fn service<U>(resource: U) -> impl TestHttpService<String>
 where U: IntoResource<DefaultSerializer, String>,
 {
     use self::futures::Future;
@@ -120,11 +123,11 @@ where U: IntoResource<DefaultSerializer, String>,
         .wait().unwrap()
 }
 
-pub trait TestHttpService: HttpService {
-    fn call_unwrap(&mut self, request: http::Request<Self::RequestBody>) -> http::Response<Self::ResponseBody> {
+pub trait TestHttpService<B: BufStream>: HttpService<B> {
+    fn call_unwrap(&mut self, request: http::Request<B>) -> http::Response<Self::ResponseBody> {
         self.call_http(request).wait().ok().unwrap()
     }
 }
 
-impl<T: HttpService> TestHttpService for T {
+impl<T: HttpService<B>, B: BufStream> TestHttpService<B> for T {
 }
