@@ -77,10 +77,7 @@ use tower_service::Service;
 /// The above log implementation is decoupled from the underlying protocol and
 /// is also decoupled from client or server concerns. In other words, the same
 /// log middleware could be used in either a client or a server.
-pub trait Middleware<S> {
-    /// The wrapped service request type
-    type Request;
-
+pub trait Middleware<S, R> {
     /// The wrapped service response type
     type Response;
 
@@ -88,7 +85,7 @@ pub trait Middleware<S> {
     type Error;
 
     /// The wrapped service
-    type Service: Service<Request = Self::Request,
+    type Service: Service<R,
                          Response = Self::Response,
                             Error = Self::Error>;
 
@@ -101,7 +98,7 @@ pub trait Middleware<S> {
     ///
     /// This defines a middleware stack.
     fn chain<T>(self, middleware: T) -> Chain<Self, T>
-    where T: Middleware<Self::Service>,
+    where T: Middleware<Self::Service, R>,
           Self: Sized,
     {
         Chain::new(self, middleware)

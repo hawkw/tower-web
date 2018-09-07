@@ -3,7 +3,10 @@ use super::{Config, CorsResource};
 use futures::{Async, Future, Poll};
 use http::{self, HeaderMap, Request, Response, StatusCode};
 use tower_service::Service;
-use util::http::HttpService;
+use util::{
+    BufStream,
+    http::HttpService,
+};
 
 use std::sync::Arc;
 
@@ -19,11 +22,11 @@ impl<S> CorsService<S> {
     }
 }
 
-impl<S> Service for CorsService<S>
+impl<S, R> Service<Request<R>> for CorsService<S>
 where
-    S: HttpService,
+    S: HttpService<R>,
+    R: BufStream,
 {
-    type Request = Request<S::RequestBody>;
     type Response = Response<Option<S::ResponseBody>>;
     type Error = S::Error;
     type Future = CorsFuture<S::Future>;
@@ -32,7 +35,7 @@ where
         self.inner.poll_http_ready()
     }
 
-    fn call(&mut self, request: Self::Request) -> Self::Future {
+    fn call(&mut self, request: Request<R>) -> Self::Future {
         let inner = match self.config.process_request(&request) {
             Ok(CorsResource::Preflight(headers)) => CorsFutureInner::Handled(Some(headers)),
             Ok(CorsResource::Simple(headers)) => {
@@ -125,8 +128,7 @@ mod test {
         requests: Vec<http::Request<DontCare>>,
     }
 
-    impl Service for MockService {
-        type Request = http::Request<DontCare>;
+    impl Service<http::Request<DontCare>> for MockService {
         type Response = http::Response<DontCare>;
         type Error = TestError;
         type Future = FutureResult<Self::Response, Self::Error>;
@@ -136,7 +138,7 @@ mod test {
             Ok(Async::Ready(()))
         }
 
-        fn call(&mut self, request: Self::Request) -> Self::Future {
+        fn call(&mut self, request: http::Request<DontCare>) -> Self::Future {
             self.requests.push(request);
             future::ok(http::Response::new(buf_stream::empty()))
         }

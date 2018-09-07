@@ -18,11 +18,10 @@ impl CorsMiddleware {
     }
 }
 
-impl<S> Middleware<S> for CorsMiddleware
+impl<S, R> Middleware<S, http::Request<R>> for CorsMiddleware
 where
-    S: HttpService,
+    S: HttpService<R>,
 {
-    type Request = http::Request<S::RequestBody>;
     type Response = http::Response<Option<S::ResponseBody>>;
     type Error = S::Error;
     type Service = CorsService<S>;
